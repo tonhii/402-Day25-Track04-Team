@@ -1,9 +1,8 @@
 
 # card.md — Lớp chỉ dẫn AI 
 
-**Tình huống xử lý chính**: T-03 — Bill có nhiều dòng số lớn, AI lấy nhầm "Tiền khách đưa" / "Tiền thối" thay vì dòng "Tổng cộng"  
-
-
+**Tình huống xử lý**: C1 — Hallucination (Trích xuất sai số tiền từ bill)  
+Xem `01-risk-map.md` Phần 4 — Primary failure deep dive.
 
 ---
 
