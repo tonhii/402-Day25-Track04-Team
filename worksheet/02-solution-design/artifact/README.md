@@ -51,9 +51,9 @@ Ba lớp này phải bổ sung cho nhau. Không làm 3 biến thể giao diện 
 
 Nhóm 3 người:
 
-- Thành viên A: `1-uiux/`
-- Thành viên B: `2-prompt/`
-- Thành viên C: `3-architecture/`
+- Hồ Thị Tố Nhi: `1-uiux/`
+- Lê Thị Phương: `2-prompt/`
+- Trần Thị Kim Ngân: `3-architecture/`
 
 Nhóm 2 người:
 
