@@ -106,11 +106,12 @@ File này sẽ được dùng tiếp ở Bài 2 để chọn rủi ro quan trọ
 
 Chọn 1-2 tình huống tệ nhất để thiết kế giải pháp.
 
-1. **Rủi ro chính**: T-01 — SMS ngân hàng chứa OTP bị lưu vào sổ. Chọn vì điểm rủi ro 25/25, hậu quả pháp lý trực tiếp (vi phạm NĐ 13/2023 về bảo vệ dữ liệu cá nhân), không thể đảo ngược nếu dữ liệu đã bị lưu và backend bị breach. Đây là red-line cứng của sản phẩm — không thể ra mắt nếu case này chưa đạt.
-2. **Rủi ro dự phòng**: T-03 — Bill có nhiều dòng số, AI lấy dòng to nhất thay vì dòng tổng. Chọn vì điểm rủi ro 20/25, xảy ra với hầu hết bill thông thường ở VN (bún phở, cơm văn phòng đều có dòng tiền thối), tần suất cao nhất trong 15 cases, ảnh hưởng trực tiếp đến độ tin cậy của báo cáo chi tiêu hàng tháng.
+1. **Rủi ro chính**: T-03 — Bill có nhiều dòng số lớn, AI lấy dòng to nhất (tiền khách đưa / tiền thối) thay vì dòng "Tổng cộng". Chọn vì tần suất xảy ra cao nhất trong thực tế (hầu hết bill ăn uống VN đều có dòng tiền thối), gây sai lệch báo cáo chi tiêu hàng tháng trực tiếp. Đây là rủi ro ở **Layer Model + Layer UI**: model OCR thiếu spatial reasoning → UI không có bước xác nhận → lỗi lọt thẳng vào database. Giải pháp UI/UX ở Bài 2 tập trung chặn tại Layer UI với 4 states: DEFAULT / UNCERTAIN / REFUSE / PRESSURE-TRAP.
+2. **Rủi ro dự phòng**: T-01 — SMS ngân hàng chứa OTP bị lưu vào sổ. Điểm rủi ro 25/25, hậu quả pháp lý trực tiếp (vi phạm NĐ 13/2023), là red-line cứng — không thể ra mắt nếu chưa đạt. Được xử lý ở Layer Input (lọc PII trước khi vào model).
 
 Chuyển rủi ro chính sang:
 
 ```text
-worksheet/02-solution-design/1-map-and-format.md
+worksheet/02-solution-design/artifact/1-uiux/card.md  (đã thiết kế)
+worksheet/02-solution-design/artifact/1-uiux/demo.md  (đã có 4-state ASCII sketch)
 ```
