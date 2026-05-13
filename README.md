@@ -1,4 +1,21 @@
-# Day 25 — Thiết kế giải pháp AI có trách nhiệm
+# Day 25 — Chủ đề 4: Trợ lý ghi chú và tổng hợp chi tiêu
+
+## Thành viên nhóm
+
+| # | Mã học viên | Họ tên đầy đủ |
+|---|-------------|---------------|
+| 1 | 2A202600107 | Lê Thị Phương      |
+| 2 | 2A202600369 | Hồ Thị Tố Nhi      |
+| 3 | 2A202600432 | Trần Thị Kim Ngân  |
+
+## Kết quả cuối
+
+- 🎯 [Bộ kiểm thử cuối](./worksheet/01-test-set-review/3-FINAL-test-set-eval-plan.md)
+- 🎯 [Thiết kế 3 lớp giải pháp](./worksheet/02-solution-design/1-map-and-format.md) + [artifact/](./worksheet/02-solution-design/artifact/)
+
+---
+
+# Hướng dẫn làm bài (Day 25 — Thiết kế giải pháp AI có trách nhiệm)
 
 Day 25 là bài tập nhóm 2-3 người cùng chủ đề. Nhóm bắt đầu từ 2 file đã làm ở Day 24 (`01-risk-map.md` + `02-test-eval-plan.md`), kết thúc bằng **bộ kiểm thử cuối** (10-15 tình huống) + **3 lớp giải pháp** cho rủi ro quan trọng nhất.
 
