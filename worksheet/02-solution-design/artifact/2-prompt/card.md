@@ -1,39 +1,48 @@
----
-artifact: 2 — Lớp chỉ dẫn AI
-bai-tap: 2 — Thiết kế giải pháp
-demo: ./demo.md
----
 
-# Lớp chỉ dẫn AI
+# card.md — Lớp chỉ dẫn AI 
 
-**Tình huống xử lý**: U-15 — Lộ OTP từ SMS ngân hàng  
-Xem `../../1-map-and-format.md` Phần A và `2-converge.md` Phần C.
+**Tình huống xử lý chính**: T-03 — Bill có nhiều dòng số lớn, AI lấy nhầm "Tiền khách đưa" / "Tiền thối" thay vì dòng "Tổng cộng"  
+
+
 
 ---
 
 ## 1. Giải pháp là gì?
 
-Thêm vào system prompt một luật **PII Detection & Hard-Stop** bắt buộc AI quét chuỗi nhạy cảm (OTP, số thẻ, số tài khoản) TRƯỚC khi xử lý nội dung SMS/ảnh bill. Nếu phát hiện bất kỳ pattern nào trong danh sách cấm, AI phải **dừng ngay lập tức**, chỉ trích xuất số tiền giao dịch sau khi đã xóa (mask) phần nhạy cảm, và hiển thị cảnh báo rõ ràng cho người dùng.
+Thêm vào system prompt một luật **Field Priority & Disambiguation**: AI không được lấy số tiền lớn nhất trong ảnh, mà phải ưu tiên theo thứ tự từ khóa: `"Tổng cộng" > "Tổng" > "Thành tiền" > "Total"`. Nếu không tìm thấy từ khóa ưu tiên hoặc phát hiện nhiều dòng số lớn tương đương, AI **bắt buộc phải hỏi lại người dùng** — không được tự chọn.
 
-> **Luật cốt lõi**: Khi nội dung đầu vào chứa chuỗi khớp với pattern OTP (6–8 chữ số sau từ khóa "OTP", "mã xác nhận", "ma xac nhan", "verification code"), số thẻ tín dụng (16 chữ số theo định dạng Visa/Mastercard/JCB), hoặc số tài khoản ngân hàng đầy đủ — AI **không được lưu, hiển thị lại, hay log** bất kỳ chuỗi đó. AI chỉ được trích xuất số tiền giao dịch (sau khi đã mask dữ liệu nhạy cảm) và phải thông báo cho người dùng rằng nội dung nhạy cảm đã được tự động xóa.
+> **Luật cốt lõi (copy-paste được):**
+>
+> *Khi đọc hóa đơn, AI phải tìm dòng có nhãn "Tổng cộng", "Tổng", "Thành tiền", hoặc "Total" để lấy số tiền thanh toán thực tế. Không được lấy dòng "Tiền khách đưa", "Tiền thối", "Tiền thừa", "Cash", "Change". Nếu không xác định được dòng nào là tổng thanh toán cuối cùng, AI phải hiển thị tất cả dòng số tìm thấy và hỏi người dùng chọn, không được tự quyết định.*
+
+**Cơ chế if/else (4 trạng thái):**
+
+| Trạng thái | Điều kiện | Hành vi AI |
+|---|---|---|
+| **DEFAULT** | Tìm thấy đúng 1 dòng "Tổng cộng" rõ ràng | Đề xuất số tiền, hỏi xác nhận |
+| **UNCERTAIN** | Nhiều dòng số lớn, không rõ dòng nào là tổng | Liệt kê tất cả, hỏi user chọn |
+| **REFUSE** | Ảnh quá mờ / bị che / không đọc được dòng nào | Từ chối trích xuất, yêu cầu chụp lại hoặc nhập tay |
+| **PRESSURE-TRAP** | User ép "áng chừng đi", "đoán cũng được" | Giữ nguyên boundary: "Mình không thể đoán số tiền — nhập tay để chắc chắn nhé" |
 
 ---
 
 ## 2. Vì sao sửa ở lớp chỉ dẫn AI?
 
-**Lý do chính:**
-- **AI đang thiếu luật rõ về: xử lý / từ chối / mask dữ liệu nhạy cảm.** Hiện tại AI không có quy tắc phân biệt "số tiền cần lưu" với "chuỗi số nhạy cảm cần hủy". Cả hai trông giống nhau trong raw text SMS.
-- **Có thể fix ngay bằng prompt** mà không cần thay đổi hệ thống backend hay pipeline OCR. Đây là lớp phòng thủ đầu tiên, nhanh nhất và có thể deploy ngay trước launch.
+**Lý do 1 — AI đoán khi không biết, không có luật ưu tiên trường dữ liệu.**  
+Model OCR hiện tại xử lý bill như một danh sách số, lấy số xuất hiện nổi bật nhất (font to, vị trí giữa ảnh). Không có luật nào nói "ưu tiên từ khóa Tổng cộng" → AI tự suy luận sai → lỗi hệ thống.
 
-**Hành động phòng vệ chính**:
+**Lý do 2 — Có thể fix ngay bằng prompt trước khi có giải pháp OCR sâu hơn.**  
+Sửa tầng model OCR cần thời gian và data. Luật prompt là lớp phòng thủ đầu tiên, deploy được ngay, không cần chờ pipeline thay đổi.
 
-- [x] Ngăn câu trả lời sai ngay từ đầu — AI học cách nhận dạng và bỏ qua OTP/thẻ
-- [ ] Bắt buộc nêu nguồn khi nói về thông tin quan trọng
-- [x] Từ chối trả lời khi thiếu căn cứ — từ chối lưu nội dung khi detect PII
-- [x] Chuyển người thật khi vượt phạm vi — cảnh báo người dùng về hành động vừa được chặn
+**Hành động phòng vệ chính:**
 
-**Tại sao không chỉ dùng luật giao diện?**  
-Giao diện chỉ hiện cảnh báo sau khi AI đã xử lý. Nếu AI log raw SMS trước khi giao diện render, dữ liệu nhạy cảm đã đi vào hệ thống. Cần chặn ở lớp instruction — trước khi AI làm bất cứ việc gì với input.
+- [x] **Ngăn** — AI có danh sách từ khóa ưu tiên, không lấy số lớn nhất một cách mù quáng
+- [ ] Bắt buộc nêu nguồn (không áp dụng cho tình huống này)
+- [x] **Từ chối** — khi ảnh mờ hoặc không xác định được, bắt buộc yêu cầu nhập tay
+- [x] **Thông báo** — hiển thị tất cả dòng số khi UNCERTAIN, để người dùng tự chọn
+
+**Tại sao cần cả lớp UI/UX?**  
+Lớp prompt xử lý phần AI hiểu bill. Nhưng dù AI đề xuất đúng, nếu UI cho phép user bấm "Lưu tất cả" mà không đọc từng khoản, lỗi vẫn lọt. Cần phối hợp với `artifact/1-uiux/` để buộc user xác nhận từng số tiền — đặc biệt khi AI đang ở trạng thái UNCERTAIN.
 
 ---
 
@@ -42,12 +51,11 @@ Giao diện chỉ hiện cảnh báo sau khi AI đã xử lý. Nếu AI log raw 
 **File demo**: [`demo.md`](./demo.md)
 
 Demo gồm:
-
-- System prompt đầy đủ với luật PII Detection
-- Danh sách pattern cần chặn
-- Mẫu câu phản hồi khi phát hiện OTP / số thẻ
-- 4 ví dụ hỏi–đáp với tình huống thật từ bộ test
-- Bảng thử lại với U-15, U-16, U-21 và các case liên quan
+- System prompt đầy đủ với luật Field Priority & 4 States
+- Danh sách từ khóa ưu tiên và từ khóa bị cấm lấy
+- 3 mẫu câu chuẩn cho DEFAULT / UNCERTAIN / PRESSURE-TRAP
+- 5 ví dụ hỏi–đáp thực tế (AI sai vs AI đúng)
+- Bảng thử lại với toàn bộ test case T-01 đến T-04 và các case liên quan
 
 ---
 
@@ -55,31 +63,29 @@ Demo gồm:
 
 **Vấn đề có thể gặp:**
 
-| Tác dụng phụ | Lý do xảy ra |
-|---|---|
-| **Over-refusal:** AI từ chối cả SMS hợp lệ vì nhận nhầm số điện thoại 10 chữ số là số thẻ | Regex pattern số thẻ 16 chữ số quá rộng, khớp với chuỗi số trong số điện thoại VN (10 chữ số) hoặc mã giao dịch |
-| **False positive OTP:** Chuỗi "Mã đơn hàng: 123456" bị hiểu là OTP | Pattern chuỗi 6 chữ số sau từ khóa mơ hồ có thể nhầm mã vận đơn, mã đơn hàng |
-| **Trải nghiệm cứng:** Mỗi SMS bị chặn AI giải thích dài dòng, user mất kiên nhẫn | Thông báo lỗi quá verbose, lặp đi lặp lại |
+| Tác dụng phụ | Lý do xảy ra | Mức nghiêm trọng |
+|---|---|---|
+| Over-refusal: AI hỏi lại quá nhiều dù bill rõ ràng | Danh sách từ khóa ưu tiên quá hẹp, không nhận ra biến thể ("Tổng tt", "TOTAL DUE") | Trung bình |
+| Trải nghiệm chậm: mỗi bill UNCERTAIN đều hiện bảng chọn | User phải tương tác thêm 1 bước khi bill phức tạp | Thấp — chấp nhận được vì đổi lấy độ chính xác |
+| AI hiển thị danh sách số quá dài (bill siêu thị nhiều dòng) | Trạng thái UNCERTAIN liệt kê quá nhiều lựa chọn | Trung bình |
 
 **Cách giảm tác dụng phụ:**
 
-1. **Tách "soft-block" và "hard-block":**
-   - *Hard-block*: OTP rõ ràng (có từ khóa "OTP", "Ma xac nhan", "han dung X phut"), số thẻ 16 chữ số theo Luhn checksum, password — **Không bao giờ lưu, không log**.
-   - *Soft-block*: Số điện thoại người thứ 3, số tài khoản chưa chắc — **Lưu nhưng mask (4 số cuối), cảnh báo user**.
+1. **Mở rộng từ khóa ưu tiên:** Bổ sung các biến thể VN thực tế: "Tổng tt", "T.Cộng", "TOTAL", "Grand Total", "Tổng thanh toán", "Số tiền phải trả".
 
-2. **Giới hạn phạm vi áp dụng:** Chỉ kích hoạt pattern detection khi input là SMS ngân hàng hoặc ảnh bill. Không áp dụng cho câu hỏi thông thường dạng text.
+2. **Giới hạn UNCERTAIN:** Nếu có dòng "Tổng cộng" nhưng cũng có nhiều số lớn khác → vẫn chọn "Tổng cộng", chỉ dùng UNCERTAIN khi **không có** từ khóa ưu tiên nào.
 
-3. **Thông báo ngắn gọn:** Dùng mẫu câu chuẩn 1–2 câu, không giải thích dài. (Xem demo.md)
+3. **Giới hạn hiển thị UNCERTAIN:** Chỉ liệt kê tối đa 3 dòng số có khả năng là tổng cao nhất — không liệt kê toàn bộ.
 
-4. **Kiểm thử lại** với U-02 (ảnh mờ), U-06 (viết tắt 35k), U-11 (batch upload) để đảm bảo luật mới không phá vỡ flow bình thường.
+4. **Kiểm thử lại** với T-01 (bill rõ ràng) và T-02 (user nhắc số) để xác nhận luật không làm chậm flow hợp lệ.
 
 ---
 
 ## 5. Checklist trước khi nộp
 
-- [x] Luật viết đủ cụ thể để AI làm theo — có danh sách pattern, có if/else rõ ràng.
-- [x] Có mẫu câu khi AI không có đủ thông tin — xem demo.md Mục 2.
-- [x] Có ví dụ cho tình huống dễ sai — 4 ví dụ, bao gồm edge case OTP không dấu.
-- [x] Có thử lại bằng tình huống trong bộ test — bảng thử lại với U-15, U-16, U-17, U-21.
-- [x] Không dùng prompt như cách duy nhất — Lớp kiến trúc (artifact/3-architecture/) xử lý redact ở pipeline OCR trước khi vào LLM.
+- [x] Luật viết đủ cụ thể — có danh sách từ khóa ưu tiên, danh sách từ khóa cấm, 4 states rõ ràng
+- [x] Có mẫu câu chuẩn cho từng trạng thái (DEFAULT / UNCERTAIN / REFUSE / PRESSURE-TRAP)
+- [x] Có 5 ví dụ hỏi–đáp, bao gồm bill phổ biến nhất (quán ăn VN có tiền thối)
+- [x] Có thử lại bằng toàn bộ test set — xem bảng demo.md Mục 4
+- [x] Không dùng prompt như cách duy nhất — phối hợp với lớp UI/UX (1-uiux/) để chặn lỗi tại bước xác nhận
 
